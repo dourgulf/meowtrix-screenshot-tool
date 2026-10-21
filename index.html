@@ -1,0 +1,297 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Meowtrix</title><style>
+*{box-sizing:border-box}body{margin:0;background:#faf7f2;color:#493b36;font:16px system-ui}main{max-width:600px;margin:auto;padding:20px 12px calc(24px + env(safe-area-inset-bottom))}h1{font-size:24px;margin:0 0 16px}button,.picker{font:inherit;color:inherit;border:1px solid #d7ccc4;border-radius:12px;background:#fff;padding:12px;cursor:pointer}button:disabled{opacity:.45}.picker{display:block;text-align:center;width:100%}input[type=file]{position:absolute;width:1px;height:1px;opacity:0}#status{min-height:64px;line-height:1.5}#board{display:grid;gap:4px;margin:16px 0}#board button{padding:0;aspect-ratio:1;border:0;border-radius:6px;color:white;font-size:clamp(18px,5vw,36px);text-shadow:0 1px 2px #555}#palette{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}#palette button{min-width:38px;height:38px;padding:4px}button[aria-pressed=true]{outline:3px solid #493b36;outline-offset:1px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1;min-width:120px}footer{font-size:12px;opacity:.65;margin-top:24px}#preview{max-height:180px;max-width:100%;display:block;margin:auto}details{margin:12px 0}
+</style></head><body><main>
+<h1 id="title"></h1><button class="picker" id="choose" type="button"></button><input id="photo" type="file" accept="image/*" hidden>
+<p id="status" role="status" aria-live="polite"></p><details id="source" hidden><summary id="sourceLabel"></summary><img id="preview" alt=""></details>
+<div id="board"></div><div id="palette"></div><div class="actions" id="actions"></div><footer id="version"></footer>
+</main><script>const catalogs={"en":{"screenshotTool":"Screenshot game tool","screenshotIntro":"Import a screenshot to practice locally. Nothing is uploaded. Closing this tool discards the board.","screenshotChoose":"Choose from Photos","screenshotLoading":"Reading image…","screenshotReview":"Check regions and marks. Tap a cell to cycle empty / × / ●; select a color to correct regions.","screenshotContinue":"Continue playing","screenshotPlaying":"Practice: tap to cycle empty / × / ●. Marks can be changed freely.","screenshotSolved":"Solved! All game rules are satisfied.","screenshotUndo":"Undo","screenshotCheck":"Check marks","screenshotEdit":"Edit recognition","screenshotConflict":"Some marks block every solution. Correct them or undo.","screenshotConsistent":"These marks allow a solution.","screenshotInvalid":"Invalid regions or no solution. Correct the region colors.","screenshotMultiple":"Multiple solutions. Check the region colors.","screenshotBudget":"Search limit reached. This board has not been verified.","screenshotFailed":"Could not read the board. Try a clear, upright screenshot with separated square cells (4–16 per side).","screenshotWebSource":"Original screenshot"},"zh":{"screenshotTool":"截图游戏工具","screenshotIntro":"导入截图，在本地练习；图片不会上传。关闭工具后不保留盘面。","screenshotChoose":"从相册选择","screenshotLoading":"正在读取图片…","screenshotReview":"请核对区域和标记。点击格子切换空白 / × / ●；选择颜色后可修正区域。","screenshotContinue":"继续游戏","screenshotPlaying":"练习中：点击切换空白 / × / ●，可自由修改标记。","screenshotSolved":"完成！已满足全部游戏规则。","screenshotUndo":"撤销","screenshotCheck":"检查标记","screenshotEdit":"修正识别","screenshotConflict":"当前标记导致无解，请修正或撤销。","screenshotConsistent":"当前标记下存在可行解。","screenshotInvalid":"区域数量不符或盘面无解，请修正区域颜色。","screenshotMultiple":"盘面有多个解，请核对区域颜色。","screenshotBudget":"已达搜索上限，此盘面尚未验证。","screenshotFailed":"无法识别盘面。请选正向清晰截图，格子需有间隙，每边 4–16 格。","screenshotWebSource":"原始截图"},"ja":{"screenshotTool":"スクリーンショット練習","screenshotIntro":"画像を端末内で読み込みます。送信しません。閉じると盤面は消えます。","screenshotChoose":"写真を選択","screenshotLoading":"読み込み中…","screenshotReview":"領域と印を確認。タップで空白 / × / ●、色を選んで領域を修正。","screenshotContinue":"ゲームを続ける","screenshotPlaying":"タップで空白 / × / ●。印は自由に変更できます。","screenshotSolved":"完成！すべてのルールを満たしました。","screenshotUndo":"元に戻す","screenshotCheck":"印を確認","screenshotEdit":"認識を修正","screenshotConflict":"この印では解けません。修正してください。","screenshotConsistent":"この印で解けます。","screenshotInvalid":"領域が不正か解がありません。色を修正してください。","screenshotMultiple":"複数の解があります。色を確認してください。","screenshotBudget":"探索上限です。盤面は未検証です。","screenshotFailed":"認識できません。隙間のある正方形のマス、各辺4〜16マスの鮮明な画像を選んでください。","screenshotWebSource":"元のスクリーンショット"},"de":{"screenshotTool":"Screenshot-Spielhilfe","screenshotIntro":"Lokal üben, ohne Upload. Beim Schließen wird das Brett verworfen.","screenshotChoose":"Foto auswählen","screenshotLoading":"Bild wird gelesen…","screenshotReview":"Regionen und Zeichen prüfen. Tippen: leer / × / ●. Farbe wählen, um Regionen zu korrigieren.","screenshotContinue":"Weiterspielen","screenshotPlaying":"Tippen: leer / × / ●. Zeichen sind frei änderbar.","screenshotSolved":"Gelöst! Alle Regeln sind erfüllt.","screenshotUndo":"Rückgängig","screenshotCheck":"Zeichen prüfen","screenshotEdit":"Erkennung korrigieren","screenshotConflict":"Diese Zeichen verhindern jede Lösung. Bitte korrigieren.","screenshotConsistent":"Mit diesen Zeichen ist eine Lösung möglich.","screenshotInvalid":"Ungültige Regionen oder keine Lösung. Farben korrigieren.","screenshotMultiple":"Mehrere Lösungen. Farben prüfen.","screenshotBudget":"Suchlimit erreicht. Brett nicht verifiziert.","screenshotFailed":"Nicht erkannt. Klares, aufrechtes Bild mit getrennten quadratischen Feldern (4–16 je Seite) wählen.","screenshotWebSource":"Original-Screenshot"},"fr":{"screenshotTool":"Outil de capture de jeu","screenshotIntro":"Entraînement local, sans envoi. Fermer efface cette grille.","screenshotChoose":"Choisir une photo","screenshotLoading":"Lecture de l’image…","screenshotReview":"Vérifiez régions et marques. Touchez : vide / × / ●. Choisissez une couleur pour corriger les régions.","screenshotContinue":"Continuer à jouer","screenshotPlaying":"Touchez : vide / × / ●. Marques librement modifiables.","screenshotSolved":"Résolu ! Toutes les règles sont respectées.","screenshotUndo":"Annuler","screenshotCheck":"Vérifier les marques","screenshotEdit":"Corriger la lecture","screenshotConflict":"Ces marques empêchent toute solution. Corrigez-les.","screenshotConsistent":"Ces marques permettent une solution.","screenshotInvalid":"Régions incorrectes ou aucune solution. Corrigez les couleurs.","screenshotMultiple":"Plusieurs solutions. Vérifiez les couleurs.","screenshotBudget":"Limite de recherche atteinte. Grille non vérifiée.","screenshotFailed":"Lecture impossible. Choisissez une image nette et droite avec des cases carrées séparées (4–16 par côté).","screenshotWebSource":"Capture d’écran originale"},"es":{"screenshotTool":"Herramienta de capturas","screenshotIntro":"Practica localmente, sin subir imágenes. Al cerrar se descarta el tablero.","screenshotChoose":"Elegir una foto","screenshotLoading":"Leyendo imagen…","screenshotReview":"Revisa regiones y marcas. Toca: vacío / × / ●. Elige un color para corregir regiones.","screenshotContinue":"Seguir jugando","screenshotPlaying":"Toca: vacío / × / ●. Puedes cambiar las marcas.","screenshotSolved":"¡Resuelto! Se cumplen todas las reglas.","screenshotUndo":"Deshacer","screenshotCheck":"Comprobar marcas","screenshotEdit":"Corregir lectura","screenshotConflict":"Estas marcas impiden toda solución. Corrígelas.","screenshotConsistent":"Estas marcas permiten una solución.","screenshotInvalid":"Regiones incorrectas o sin solución. Corrige los colores.","screenshotMultiple":"Varias soluciones. Revisa los colores.","screenshotBudget":"Límite de búsqueda alcanzado. Tablero sin verificar.","screenshotFailed":"No se pudo leer. Elige una captura clara y vertical con casillas cuadradas separadas (4–16 por lado).","screenshotWebSource":"Captura original"},"it":{"screenshotTool":"Strumento screenshot","screenshotIntro":"Esercitati in locale, senza inviare immagini. Chiudendo elimini la griglia.","screenshotChoose":"Scegli una foto","screenshotLoading":"Lettura immagine…","screenshotReview":"Controlla regioni e segni. Tocca: vuoto / × / ●. Scegli un colore per correggere le regioni.","screenshotContinue":"Continua a giocare","screenshotPlaying":"Tocca: vuoto / × / ●. Puoi modificare i segni.","screenshotSolved":"Risolto! Tutte le regole sono rispettate.","screenshotUndo":"Annulla","screenshotCheck":"Controlla segni","screenshotEdit":"Correggi lettura","screenshotConflict":"Questi segni impediscono ogni soluzione. Correggili.","screenshotConsistent":"Questi segni consentono una soluzione.","screenshotInvalid":"Regioni errate o nessuna soluzione. Correggi i colori.","screenshotMultiple":"Più soluzioni. Controlla i colori.","screenshotBudget":"Limite di ricerca raggiunto. Griglia non verificata.","screenshotFailed":"Lettura impossibile. Scegli una cattura chiara e dritta con caselle quadrate separate (4–16 per lato).","screenshotWebSource":"Schermata originale"},"pt":{"screenshotTool":"Ferramenta de capturas","screenshotIntro":"Pratica localmente, sem enviar imagens. Fechar descarta o tabuleiro.","screenshotChoose":"Escolher uma foto","screenshotLoading":"A ler imagem…","screenshotReview":"Confirma regiões e marcas. Toca: vazio / × / ●. Escolhe uma cor para corrigir regiões.","screenshotContinue":"Continuar a jogar","screenshotPlaying":"Toca: vazio / × / ●. Podes alterar as marcas.","screenshotSolved":"Resolvido! Todas as regras foram cumpridas.","screenshotUndo":"Desfazer","screenshotCheck":"Verificar marcas","screenshotEdit":"Corrigir leitura","screenshotConflict":"Estas marcas impedem qualquer solução. Corrige-as.","screenshotConsistent":"Estas marcas permitem uma solução.","screenshotInvalid":"Regiões inválidas ou sem solução. Corrige as cores.","screenshotMultiple":"Várias soluções. Confirma as cores.","screenshotBudget":"Limite de pesquisa atingido. Tabuleiro não verificado.","screenshotFailed":"Não foi possível ler. Escolhe uma captura nítida e direita com células quadradas separadas (4–16 por lado).","screenshotWebSource":"Captura original"}};const buildVersion="6f1f0bf59276";
+// Author: lidawen
+// Local, template-free transcription of axis-aligned separated square tiles.
+const distance = (a, b) => Math.hypot(...a.map((v, i) => v - b[i]));
+function transcribeScreenshot(image) {
+  return transcribeImage(image, false);
+}
+
+function transcribeImage({ width, height, data }, gradientFallback) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 40 || height < 40 || width * height > 1600000 || data.length !== width * height * 4) throw Error('image');
+  const seen = new Uint8Array(width * height), queue = new Int32Array(width * height), tiles = [];
+  const rgb = i => [data[i * 4], data[i * 4 + 1], data[i * 4 + 2]];
+  for (let seed = 0; seed < seen.length; seed++) {
+    if (seen[seed]) continue;
+    const base = rgb(seed), sum = [0, 0, 0]; let head = 0, tail = 1, x0 = width, x1 = 0, y0 = height, y1 = 0;
+    queue[0] = seed; seen[seed] = 1;
+    while (head < tail) {
+      const p = queue[head++], x = p % width, y = Math.floor(p / width);
+      for (let channel = 0; channel < 3; channel++) sum[channel] += data[p * 4 + channel];
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      for (const q of [x ? p - 1 : -1, x < width - 1 ? p + 1 : -1, y ? p - width : -1, y < height - 1 ? p + width : -1]) {
+        if (q < 0 || seen[q]) continue;
+        if (distance(base, rgb(q)) < (gradientFallback ? 40 : 24)) { seen[q] = 1; queue[tail++] = q; }
+      }
+    }
+    // The seed may lie on an anti-aliased edge. Use the component fill,
+    // not that one pixel, when clustering region colors across cells.
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+    if (w > width / 25 && w < width / 3 && h / w > (gradientFallback ? .80 : .88) && h / w < (gradientFallback ? 1.25 : 1.12) && tail / (w * h) > .24) tiles.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, w, h, base: sum.map(value => Math.round(value / tail)) });
+  }
+  // A JPEG/antialiased edge may form a second, nested component. Keep one
+  // geometric tile per center before counting rows, preferring its outer fill.
+  const uniqueTiles = [];
+  for (const tile of [...tiles].sort((a, b) => b.w * b.h - a.w * a.h)) {
+    if (!uniqueTiles.some(t => Math.abs(t.x - tile.x) < t.w * .18 && Math.abs(t.y - tile.y) < t.h * .18)) uniqueTiles.push(tile);
+  }
+  tiles.length = 0;
+  tiles.push(...uniqueTiles);
+  // A candidate must not end while the same lattice visibly continues.
+  // This rejects a dense corner of a larger board without using puzzle rules.
+  const continues = (x, y, n, pitch, tileWidth) => {
+    for (const side of [-1, n]) for (const vertical of [false, true]) {
+      let count = 0;
+      for (let i = 0; i < n; i++) {
+        const cx = x + (vertical ? i : side) * pitch;
+        const cy = y + (vertical ? side : i) * pitch;
+        if (tiles.some(t => Math.abs(t.x - cx) < pitch * .16 && Math.abs(t.y - cy) < pitch * .16 && Math.abs(t.w - tileWidth) < tileWidth * .22)) count++;
+      }
+      if (count >= 2) return true;
+    }
+    return false;
+  };
+  let best = null;
+  for (const anchor of tiles) {
+    const row = tiles.filter(t => Math.abs(t.y - anchor.y) < anchor.w * .12 && Math.abs(t.w - anchor.w) < anchor.w * .15).sort((a, b) => a.x - b.x);
+    const n = row.length;
+    if (n < 4 || n > 16) continue;
+    const pitch = (row[n - 1].x - row[0].x) / (n - 1);
+    if (pitch < anchor.w || pitch > anchor.w * 1.4 || row.some((t, c) => Math.abs(t.x - row[0].x - c * pitch) > pitch * .08)) continue;
+    // Fit the lattice from any complete row, allowing a few damaged fills.
+    // Every row and column must still have substantial independent support.
+    for (let offset = 0; offset < n; offset++) {
+      const grid = [], rows = Array(n).fill(0), columns = Array(n).fill(0);
+      const top = anchor.y - offset * pitch;
+      if (top - pitch / 2 < 0 || top + (n - .5) * pitch >= height) continue;
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        const x = row[0].x + c * pitch, y = top + r * pitch;
+        const t = tiles.find(t => Math.abs(t.x - x) < pitch * .12 && Math.abs(t.y - y) < pitch * .12 && Math.abs(t.w - anchor.w) < anchor.w * .18);
+        if (t) { rows[r]++; columns[c]++; }
+        grid.push(t || { x, y, w: anchor.w, h: anchor.w, inferred: true });
+      }
+      const support = rows.reduce((a, b) => a + b, 0);
+      if (support < n * n * .85 || Math.min(...rows, ...columns) < n * .6) continue;
+      if (continues(row[0].x, top, n, pitch, anchor.w)) continue;
+      const score = n * pitch * (support / (n * n));
+      if (!best || score > best.score) best = { size: n, pitch, grid, score };
+    }
+  }
+  // Occluded boards may have no intact row. Recover axes from repeated
+  // centers across multiple rows/columns instead of requiring a complete row.
+  if (!best) for (const anchor of tiles) {
+    const peers = tiles.filter(t => Math.abs(t.w - anchor.w) < anchor.w * .18);
+    const axis = key => {
+      const groups = [];
+      for (const t of [...peers].sort((a, b) => a[key] - b[key])) {
+        let group = groups[groups.length - 1];
+        if (!group || Math.abs(t[key] - group.mean) > anchor.w * .20) {
+          group = { mean: t[key], count: 0 }; groups.push(group);
+        }
+        group.mean = (group.mean * group.count + t[key]) / ++group.count;
+      }
+      return groups.filter(g => g.count >= 3).map(g => g.mean);
+    };
+    const xs = axis('x'), ys = axis('y'), n = xs.length;
+    if (n < 4 || n > 16 || ys.length !== n) continue;
+    const pitch = (xs[n - 1] - xs[0]) / (n - 1);
+    if (pitch < anchor.w || pitch > anchor.w * 1.4) continue;
+    if ([xs, ys].some(values => values.some((v, i) => Math.abs(v - values[0] - i * pitch) > pitch * .10))) continue;
+    if (xs[0] < pitch / 2 || ys[0] < pitch / 2 || xs[n - 1] + pitch / 2 >= width || ys[n - 1] + pitch / 2 >= height) continue;
+    const grid = [], rows = Array(n).fill(0), columns = Array(n).fill(0);
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      const x = xs[0] + c * pitch, y = ys[0] + r * pitch;
+      const t = peers.find(t => Math.abs(t.x - x) < pitch * .12 && Math.abs(t.y - y) < pitch * .12);
+      if (t) { rows[r]++; columns[c]++; }
+      grid.push(t || { x, y, w: anchor.w, h: anchor.w, inferred: true });
+    }
+    const support = rows.reduce((a, b) => a + b, 0);
+    if (support < n * n * .60 || Math.min(...rows, ...columns) < n * .4) continue;
+    if (continues(xs[0], ys[0], n, pitch, anchor.w)) continue;
+    const score = n * pitch * support / (n * n);
+    if (!best || score > best.score) best = { size: n, pitch, grid, score, occluded: true };
+  }
+  if (!best) {
+    // Gradients can split a square fill into a shorter component. Retry once
+    // with wider aspect and fill-color tolerances, preserving ordinary-board behavior.
+    if (!gradientFallback) return transcribeImage({ width, height, data }, true);
+    throw Error('grid');
+  }
+  // Foreground components can masquerade as smaller square tiles. Sample
+  // color using the median board tile size, not that component's footprint.
+  const widths = best.grid.map(t => t.w).sort((a, b) => a - b);
+  const colorWidth = widths[Math.floor(widths.length / 2)];
+  const palette = [], regions = [], cells = [], uncertain = [];
+  for (const [index, tile] of best.grid.entries()) {
+    {
+      // Vote for a color cluster, rather than mixing foreground/background RGB.
+      // Corners and peripheral fill outweigh the central sprite; skip the rim.
+      const bins = new Map(), neutralBins = new Map();
+      const extent = Math.floor(colorWidth * .46);
+      for (let y = -extent; y <= extent; y++) for (let x = -extent; x <= extent; x++) {
+        const outer = Math.max(Math.abs(x), Math.abs(y)) / colorWidth;
+        const inner = Math.min(Math.abs(x), Math.abs(y)) / colorWidth;
+        const weight = inner >= .30 ? 4 : outer >= .30 ? 1 : .03;
+        const color = rgb(Math.round(tile.y + y) * width + Math.round(tile.x + x));
+        const target = best.occluded && Math.max(...color) - Math.min(...color) < 35 ? neutralBins : bins;
+        const key = color.map(v => Math.floor(v / 24)).join(',');
+        const bin = target.get(key) || { count: 0, sum: [0, 0, 0] };
+        bin.count += weight; color.forEach((v, i) => bin.sum[i] += v * weight); target.set(key, bin);
+      }
+      // Gray/taupe regions are valid: keep neutral pixels as a fallback
+      // instead of rejecting a cell when highlight filtering removes all votes.
+      const dominant = [...(bins.size ? bins : neutralBins).values()].sort((a, b) => b.count - a.count)[0];
+      if (!dominant) throw Error('color');
+      tile.base = dominant.sum.map(v => Math.round(v / dominant.count));
+      if (tile.inferred || best.occluded) uncertain.push(index);
+    }
+    let region = palette.findIndex(p => distance(p, tile.base) < (gradientFallback ? 40 : 30));
+    if (region < 0) { region = palette.length; palette.push(tile.base); }
+    regions.push(region);
+    const points = [], extent = Math.floor(tile.w * .39);
+    for (let y = -extent; y <= extent; y++) for (let x = -extent; x <= extent; x++) {
+      const p = (Math.round(tile.y + y) * width + Math.round(tile.x + x));
+      if (distance(rgb(p), tile.base) > 55) points.push([x, y]);
+    }
+    if (points.length < tile.w * tile.h * .012) { cells.push(0); continue; }
+    const radius = Math.max(...points.map(p => Math.max(Math.abs(p[0]), Math.abs(p[1]))));
+    const diagonal = points.filter(([x, y]) => Math.abs(Math.abs(x) - Math.abs(y)) < radius * .38 + 1).length / points.length;
+    const quadrants = [0, 0, 0, 0];
+    for (const [x, y] of points) quadrants[(x > 0 ? 1 : 0) + (y > 0 ? 2 : 0)]++;
+    const cross = diagonal > .83 && Math.min(...quadrants) / Math.max(...quadrants) > .55;
+    cells.push(cross ? 1 : 2);
+    if (!cross && !uncertain.includes(index)) uncertain.push(index); // Arbitrary sprites require visual review.
+  }
+  return { size: best.size, regions, cells, palette: palette.map(p => '#' + p.map(v => v.toString(16).padStart(2, '0')).join('')), uncertain };
+}
+
+// Bounded exhaustive rule check. A budget exhaustion is never reported as unique.
+function solveImported(board, respectMarks = false, budget = 250000) {
+  const { size: n, regions, cells } = board;
+  if (!Number.isInteger(n) || n < 4 || n > 16 || regions.length !== n * n || cells.length !== n * n || new Set(regions).size !== n || !cells.every(v => [0, 1, 2].includes(v))) return { status: 'invalid', solutions: [] };
+  const solutions = [], chosen = new Array(n).fill(-1), columns = new Set(), used = new Set(); let steps = 0, exhausted = false;
+  function candidates(row) {
+    const cats = respectMarks ? cells.slice(row * n, (row + 1) * n).flatMap((v, c) => v === 2 ? [c] : []) : [];
+    if (cats.length > 1) return [];
+    const result = [];
+    for (let c = 0; c < n; c++) {
+      const i = row * n + c;
+      if (respectMarks && (cells[i] === 1 || cats.length && cats[0] !== c)) continue;
+      if (columns.has(c) || used.has(regions[i])) continue;
+      if ([row - 1, row + 1].some(r => r >= 0 && r < n && chosen[r] >= 0 && Math.abs(chosen[r] % n - c) <= 1)) continue;
+      result.push(i);
+    }
+    return result;
+  }
+  function visit(depth) {
+    if (++steps > budget) { exhausted = true; return; }
+    if (depth === n) { solutions.push([...chosen]); return; }
+    let options = null;
+    const byRegion = new Map();
+    for (let r = 0; r < n; r++) if (chosen[r] < 0) {
+      const values = candidates(r);
+      if (!values.length) return;
+      if (!options || values.length < options.length) options = values;
+      for (const i of values) { if (!byRegion.has(regions[i])) byRegion.set(regions[i], []); byRegion.get(regions[i]).push(i); }
+    }
+    for (const region of new Set(regions)) if (!used.has(region)) {
+      const values = byRegion.get(region);
+      if (!values) return;
+      if (values.length < options.length) options = values;
+    }
+    for (const i of options) {
+      const row = Math.floor(i / n), c = i % n, region = regions[i];
+      chosen[row] = i; columns.add(c); used.add(region); visit(depth + 1); chosen[row] = -1; columns.delete(c); used.delete(region);
+      if (solutions.length >= 2 || exhausted) return;
+    }
+  }
+  visit(0);
+  return { status: exhausted ? 'budget' : solutions.length === 0 ? 'none' : solutions.length === 1 ? 'unique' : 'multiple', solutions };
+}
+
+// Author: lidawen
+// No network requests, native bridge, persistence, or reward-bearing Session.
+const locale = new URLSearchParams(location.search).get('lang') || navigator.language.split('-')[0];
+const messages = catalogs[locale] || catalogs.en;
+const tr = key => messages[key] || catalogs.en[key] || key;
+const el = id => document.getElementById(id);
+let board = null, playing = false, paint = -1, history = [], pending = false, sourceURL = null;
+function status(key) { el('status').textContent = tr(key); }
+function button(parent, label, action) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+  b.addEventListener('click', action); parent.append(b); return b;
+}
+function render() {
+  el('board').replaceChildren(); el('palette').replaceChildren(); el('actions').replaceChildren();
+  if (!board) return;
+  const { size, cells, regions, palette } = board;
+  el('board').style.gridTemplateColumns = `repeat(${size},1fr)`;
+  cells.forEach((value, i) => {
+    const b = button(el('board'), ['', '×', '●'][value], () => {
+      if (pending) return;
+      if (!playing && paint >= 0) regions[i] = paint;
+      else { history.push([...cells]); cells[i] = (cells[i] + 1) % 3; }
+      status(playing ? 'screenshotPlaying' : 'screenshotReview');
+      if (playing && cells.filter(v => v === 2).length === size && solveImported(board, true).status === 'unique') status('screenshotSolved');
+      render();
+    });
+    b.style.background = palette[regions[i]];
+    b.setAttribute('aria-label', `${Math.floor(i / size) + 1}, ${i % size + 1}: ${['–','×','●'][value]}`);
+  });
+  if (!playing) {
+    const marks = button(el('palette'), '× / ●', () => { paint = -1; render(); });
+    marks.setAttribute('aria-pressed', String(paint === -1));
+    palette.forEach((color, i) => {
+      const b = button(el('palette'), String(i + 1), () => { paint = i; render(); });
+      b.style.background = color; b.setAttribute('aria-pressed', String(paint === i));
+    });
+    button(el('actions'), tr('screenshotContinue'), () => {
+      const result = solveImported(board).status;
+      if (result !== 'unique') { status(result === 'budget' ? 'screenshotBudget' : result === 'multiple' ? 'screenshotMultiple' : 'screenshotInvalid'); return; }
+      playing = true; paint = -1; history = [];
+      status(solveImported(board, true).status === 'none' ? 'screenshotConflict' : 'screenshotPlaying'); render();
+    });
+  } else {
+    const undo = button(el('actions'), tr('screenshotUndo'), () => { board.cells = history.pop(); status('screenshotPlaying'); render(); });
+    undo.disabled = !history.length;
+    button(el('actions'), tr('screenshotCheck'), () => {
+      const result = solveImported(board, true).status;
+      status(result === 'none' || result === 'invalid' ? 'screenshotConflict' : result === 'budget' ? 'screenshotBudget' : 'screenshotConsistent');
+    });
+    button(el('actions'), tr('screenshotEdit'), () => { playing = false; history = []; status('screenshotReview'); render(); });
+  }
+}
+el('choose').addEventListener('click', () => el('photo').click());
+el('photo').addEventListener('change', async event => {
+  const file = event.target.files[0]; event.target.value = '';
+  if (!file || pending) return;
+  pending = true; el('photo').disabled = true; el('choose').disabled = true; status('screenshotLoading');
+  let url;
+  try {
+    url = URL.createObjectURL(file);
+    const image = new Image(); image.src = url; await image.decode();
+    const scale = Math.min(1, 600 / image.naturalWidth, 1200 / image.naturalHeight);
+    const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.floor(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.floor(image.naturalHeight * scale));
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    const next = transcribeScreenshot(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    board = next; playing = false; paint = -1; history = [];
+    if (sourceURL) URL.revokeObjectURL(sourceURL); sourceURL = url; url = null;
+    el('preview').src = sourceURL; el('source').hidden = false;
+    status('screenshotReview'); render();
+  } catch { status('screenshotFailed'); }
+  finally { if (url) URL.revokeObjectURL(url); pending = false; el('photo').disabled = false; el('choose').disabled = false; }
+});
+el('title').textContent = tr('screenshotTool'); el('choose').textContent = tr('screenshotChoose');
+el('sourceLabel').textContent = tr('screenshotWebSource'); el('version').textContent = `Meowtrix · ${buildVersion}`;
+document.documentElement.lang = catalogs[locale] ? locale : 'en'; status('screenshotIntro');
+</script></body></html>
